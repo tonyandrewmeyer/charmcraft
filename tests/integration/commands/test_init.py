@@ -40,6 +40,13 @@ BASIC_INIT_FILES = frozenset(
     pathlib.Path(p)
     for p in (
         ".gitignore",
+        ".workshop",
+        ".workshop/project-dev",
+        ".workshop/project-dev/sdk.yaml",
+        ".workshop/project-dev/hooks",
+        ".workshop/project-dev/hooks/setup-base",
+        ".workshop/project-dev/hooks/setup-project",
+        ".workshop/project-dev/hooks/check-health",
         "charmcraft.yaml",
         "CONTRIBUTING.md",
         "LICENSE",
@@ -55,6 +62,7 @@ BASIC_INIT_FILES = frozenset(
         "tests/unit/test_charm.py",
         "tox.ini",
         "uv.lock",
+        "workshop.yaml",
     )
 )
 UNKNOWN_AUTHOR_REGEX = re.compile(
@@ -145,6 +153,43 @@ def test_files_created_correct(
         re.search(rf"^name: {charm_name}$", charmcraft_yaml, re.MULTILINE)
     )
     pytest_check.is_true(re.search(rf"^# Copyright \d+ {author}", tox_ini))
+
+
+WORKSHOP_HOOKS = (
+    ".workshop/project-dev/hooks/setup-base",
+    ".workshop/project-dev/hooks/setup-project",
+    ".workshop/project-dev/hooks/check-health",
+)
+
+
+@pytest.mark.parametrize("profile", ["machine", "kubernetes"])
+def test_workshop_scaffold(new_path, init_command, profile):
+    init_command.run(create_namespace(name="my-charm", profile=profile))
+
+    workshop_yaml = (new_path / "workshop.yaml").read_text(encoding="utf-8")
+    sdk_yaml = (new_path / ".workshop/project-dev/sdk.yaml").read_text(encoding="utf-8")
+
+    # The charm name is substituted into the rendered files.
+    pytest_check.is_in("for the my-charm charm", workshop_yaml)
+    pytest_check.is_in("for the my-charm charm", sdk_yaml)
+
+    # No template syntax is left behind in any rendered Workshop file.
+    for relpath in ("workshop.yaml", ".workshop/project-dev/sdk.yaml", *WORKSHOP_HOOKS):
+        contents = (new_path / relpath).read_text(encoding="utf-8")
+        pytest_check.is_not_in("{{", contents)
+        pytest_check.is_not_in("{%", contents)
+
+    # The in-project SDK is referenced from workshop.yaml and is hooks-only
+    # (no build-time fields).
+    pytest_check.is_in("name: project-dev", workshop_yaml)
+    for build_field in ("base:", "build-base:", "platforms:", "parts:"):
+        pytest_check.is_not_in(build_field, sdk_yaml)
+
+    # The hooks are emitted and executable.
+    if os.name == "posix":
+        for hook in WORKSHOP_HOOKS:
+            mode = (new_path / hook).stat().st_mode
+            pytest_check.equal(mode & S_IXALL, S_IXALL)
 
 
 def test_force(new_path, init_command):

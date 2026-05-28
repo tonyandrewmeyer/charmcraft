@@ -1,0 +1,23 @@
+#!/bin/bash -e
+# Workshop `setup-base` hook for the {{ name }} charm dev environment.
+# Runs as root while the workshop base image is being prepared.
+#
+# `charmcraft pack --destructive-mode` packs the charm in this environment as
+# the unprivileged `workshop` user, which cannot install apt or snap packages.
+# Install the common charm build tooling here so that packing works without any
+# nested provisioning. Dependencies the charm itself declares are installed by
+# the setup-project hook.
+apt-get -y update
+apt-get -y install \
+  build-essential \
+  findutils \
+  git \
+  python3-dev \
+  python3-pip \
+  python3-setuptools \
+  python3-venv \
+  python3-wheel
+
+# `yq` is used by the setup-project hook to read the charm's declared
+# build-packages and build-snaps out of charmcraft.yaml.
+snap install yq
