@@ -82,6 +82,10 @@ files and directories::
 
     .
     ├── charmcraft.yaml            - Charm build configuration
+    ├── workshop.yaml              - Canonical Workshop dev environment, created
+    │                                if profile is 'kubernetes' or 'machine'
+    ├── .workshop                  - In-project Workshop SDK with setup hooks,
+    │                                created if profile is 'kubernetes' or 'machine'
     ├── CONTRIBUTING.md            - Instructions for how to build and develop
     │                                your charm
     ├── LICENSE                    - Your charm license, we recommend Apache 2
@@ -245,6 +249,9 @@ class InitCommand(base.CharmcraftCommand):
             "src/charm.py",
             "tests/spread/lib/tools/retry",
             "spread/.extension",
+            ".workshop/project-dev/hooks/setup-base",
+            ".workshop/project-dev/hooks/setup-project",
+            ".workshop/project-dev/hooks/check-health",
         ]
         src_files = ["src/charm.py"]
         for template_name in env.list_templates():

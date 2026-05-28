@@ -1,0 +1,19 @@
+#!/bin/bash -e
+# Workshop `setup-project` hook for the {{ name }} charm dev environment.
+# Runs as root after the project is mounted at /project.
+#
+# Pre-install the build dependencies that the charm declares in charmcraft.yaml.
+# `charmcraft pack --destructive-mode` runs as the unprivileged `workshop` user
+# and cannot install these itself, so they must already be present.
+cd /project
+
+if [ -f charmcraft.yaml ]; then
+  # apt build-packages (none in the default template, but charms may add some).
+  yq '.parts.charm.build-packages[]' charmcraft.yaml | xargs -r apt-get -y install
+  # classic snaps the charm builds with, e.g. astral-uv for the uv plugin.
+  yq '.parts.charm.build-snaps[]' charmcraft.yaml | xargs -rn1 snap install --classic
+fi
+
+# Create the charm's Python virtualenv as the workshop user so that the unit and
+# integration test actions in workshop.yaml can `uv run` straight away.
+sudo -iu workshop -- bash -lc 'cd /project && uv sync'
