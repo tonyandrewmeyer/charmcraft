@@ -1,0 +1,13 @@
+name: my-charm
+type: charm
+title: My pylock charm
+summary: An operator charm using a PEP 751 lock file.
+description: |
+  An operator charm that installs its dependencies from a pylock.toml file.
+base: ubuntu@26.04
+platforms:
+  amd64:
+parts:
+  my-charm:
+    source: .
+    plugin: pylock

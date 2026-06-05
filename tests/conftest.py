@@ -467,6 +467,30 @@ def poetry_plugin(tmp_path: pathlib.Path):
 
 
 @pytest.fixture
+def pylock_plugin(tmp_path: pathlib.Path):
+    project_dirs = craft_parts.ProjectDirs(work_dir=tmp_path)
+    spec = {
+        "plugin": "pylock",
+        "source": str(tmp_path),
+    }
+    plugin_properties = parts.plugins.PylockPluginProperties.unmarshal(spec)
+    part_spec = craft_parts.plugins.extract_part_properties(spec, plugin_name="pylock")
+    part = craft_parts.Part(
+        "foo", part_spec, project_dirs=project_dirs, plugin_properties=plugin_properties
+    )
+    project_info = craft_parts.ProjectInfo(
+        application_name="test",
+        project_dirs=project_dirs,
+        cache_dir=tmp_path,
+    )
+    part_info = craft_parts.PartInfo(project_info=project_info, part=part)
+
+    return craft_parts.plugins.get_plugin(
+        part=part, part_info=part_info, properties=plugin_properties
+    )
+
+
+@pytest.fixture
 def python_plugin(tmp_path: pathlib.Path):
     project_dirs = craft_parts.ProjectDirs(work_dir=tmp_path)
     spec = {
