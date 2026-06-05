@@ -35,6 +35,7 @@ Dependency management
 - :ref:`pyproject-toml-file`
 - :ref:`requirements-txt-file`
 - :ref:`uv-lock-file`
+- :ref:`pylock-file`
 
 
 Testing
@@ -69,3 +70,4 @@ Testing
     tests-integration-test-charm-py-file
     tox-ini-file
     uv-lock-file
+    pylock-file

@@ -19,6 +19,7 @@ environments and manipulate files.
 - :ref:`craft_parts_python_plugin`
 - :ref:`craft_parts_poetry_plugin`
 - :ref:`craft_parts_uv_plugin`
+- :ref:`craft_parts_pylock_plugin`
 - :ref:`craft_parts_dump_plugin`
 - :ref:`craft_parts_nil_plugin`
 
@@ -31,3 +32,4 @@ environments and manipulate files.
     python_plugin
     poetry_plugin
     uv_plugin
+    pylock_plugin
