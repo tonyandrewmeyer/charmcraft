@@ -1,0 +1,29 @@
+name: test-charm
+type: charm
+title: Charm Template
+summary: A charm that installs its dependencies from a PEP 751 pylock.toml.
+description: |
+  A single sentence that says what the charm is, concisely and memorably.
+
+base: ubuntu@26.04
+build-base: ubuntu@devel
+platforms:
+  # The pyyaml wheel pinned in pylock.toml is amd64-specific, so this fixture
+  # is restricted to a single platform.
+  amd64:
+
+parts:
+  charm:
+    plugin: pylock
+    source: .
+
+config:
+  options:
+    # An example config option to customise the log level of the workload
+    log-level:
+      description: |
+        Configures the log level of gunicorn.
+
+        Acceptable values are: "info", "debug", "warning", "error" and "critical"
+      default: "info"
+      type: string

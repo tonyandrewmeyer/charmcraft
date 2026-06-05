@@ -18,6 +18,7 @@
 
 from ._charm import CharmPlugin, CharmPluginProperties
 from ._poetry import PoetryPlugin, PoetryPluginProperties
+from ._pylock import PylockPlugin, PylockPluginProperties
 from ._python import PythonPlugin, PythonPluginProperties
 from ._reactive import ReactivePlugin, ReactivePluginProperties
 from ._uv import UvPlugin
@@ -28,6 +29,8 @@ __all__ = [
     "CharmPluginProperties",
     "PoetryPlugin",
     "PoetryPluginProperties",
+    "PylockPlugin",
+    "PylockPluginProperties",
     "PythonPlugin",
     "PythonPluginProperties",
     "ReactivePlugin",
