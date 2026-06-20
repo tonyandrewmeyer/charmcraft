@@ -69,3 +69,33 @@ resources:
     # The test_deploy function in tests/integration/test_charm.py reads upstream-source
     # to determine which OCI image to use when running the charm's integration tests.
     upstream-source: some-repo/some-image:some-tag
+
+# Charm libraries from Charmhub that the charm uses.
+# Run `charmcraft fetch-libs` after init to download these into lib/.
+# After fetching, inspect the PYDEPS comment in each library and add any
+# listed packages to the [project].dependencies in pyproject.toml.
+# https://documentation.ubuntu.com/charmcraft/stable/reference/files/charmcraft-yaml-file/#charm-libs
+charm-libs:
+  - lib: prometheus_k8s.prometheus_scrape
+    version: "0"
+  - lib: loki_k8s.loki_push
+    version: "1"
+  - lib: grafana_k8s.grafana_dashboard
+    version: "0"
+
+# Relations that this charm provides to other applications.
+# https://documentation.ubuntu.com/charmcraft/stable/reference/files/charmcraft-yaml-file/#provides
+provides:
+  # Expose the workload's Prometheus metrics endpoint for scraping.
+  metrics-endpoint:
+    interface: prometheus_scrape
+  # Register Grafana dashboards for this charm's workload.
+  grafana-dashboard:
+    interface: grafana_dashboard
+
+# Relations that this charm requires from other applications.
+# https://documentation.ubuntu.com/charmcraft/stable/reference/files/charmcraft-yaml-file/#requires
+requires:
+  # Forward workload logs to a Loki instance (e.g. from COS lite).
+  logging:
+    interface: loki_push
