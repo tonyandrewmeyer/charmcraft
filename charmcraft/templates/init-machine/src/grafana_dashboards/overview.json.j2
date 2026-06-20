@@ -1,0 +1,72 @@
+{
+  "title": "{{ name }} Overview",
+  "description": "Overview dashboard for the {{ name }} charm. Add panels here to visualise your workload metrics.",
+  "tags": ["{{ name }}"],
+  "style": "dark",
+  "timezone": "browser",
+  "editable": true,
+  "graphTooltip": 0,
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "refresh": "30s",
+  "schemaVersion": 27,
+  "version": 1,
+  "links": [],
+  "templating": {
+    "list": [
+      {
+        "name": "juju_application",
+        "label": "Application",
+        "type": "query",
+        "datasource": "Prometheus",
+        "query": "label_values(up{juju_charm=\"{{ name }}\"},juju_application)",
+        "refresh": 2,
+        "includeAll": false,
+        "multi": false,
+        "hide": 0
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Workload Up",
+      "description": "Whether grafana-agent can reach the workload metrics endpoint.",
+      "targets": [
+        {
+          "expr": "up{juju_application=\"$juju_application\"}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {"type": "value", "options": {"0": {"text": "Down", "color": "red"}}},
+            {"type": "value", "options": {"1": {"text": "Up", "color": "green"}}}
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "green", "value": 1}
+            ]
+          }
+        }
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0}
+    },
+    {
+      "id": 2,
+      "type": "text",
+      "title": "Getting Started",
+      "options": {
+        "mode": "markdown",
+        "content": "## {{ name }}\n\nThis is a starter dashboard. Replace or extend these panels with metrics from your workload.\n\n- Configure your workload to expose Prometheus metrics on port **8080** at **/metrics**.\n- Deploy `grafana-agent` (machine) and relate via `cos-agent` to activate collection.\n- See [COS lite docs](https://documentation.ubuntu.com/cos-lite/) for the full observability stack.\n"
+      },
+      "gridPos": {"h": 4, "w": 18, "x": 6, "y": 0}
+    }
+  ]
+}
