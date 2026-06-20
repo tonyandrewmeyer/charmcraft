@@ -2,6 +2,11 @@
 # See LICENSE file for licensing details.
 #
 # To learn more about testing, see https://canonical.com/juju/docs/ops/latest/explanation/testing/
+#
+# NOTE: charm libraries must be downloaded before running tests:
+#   charmcraft fetch-libs
+
+import json
 
 import pytest
 from ops import testing
@@ -24,3 +29,49 @@ def test_start(monkeypatch: pytest.MonkeyPatch):
     # Assert:
     assert state_out.workload_version is not None
     assert state_out.unit_status == testing.ActiveStatus()
+
+
+# ---------------------------------------------------------------------------
+# Observability tests
+# These tests verify the COS integration wired in charm.__init__.
+# They require the charm libraries to be downloaded first:
+#   charmcraft fetch-libs
+# ---------------------------------------------------------------------------
+
+
+def test_cos_agent_relation_joined():
+    """COS agent configuration is published when grafana-agent joins the cos-agent relation."""
+    # Arrange:
+    ctx = testing.Context({{ class_name }})
+    rel = testing.Relation("cos-agent")
+    state_in = testing.State(relations={rel})
+
+    # Act: fire relation-joined so COSAgentProvider populates the relation data.
+    state_out = ctx.run(ctx.on.relation_joined(rel), state_in)
+
+    # Assert: the provider should have written its configuration to unit relation data.
+    # COSAgentProvider serialises metrics endpoints, dashboard dirs, etc. into
+    # the 'config' key of the local unit's relation data bucket.
+    rel_out = state_out.get_relation(rel.id)
+    assert "config" in rel_out.local_unit_data, (
+        "COSAgentProvider should set 'config' in unit relation data"
+    )
+    config = json.loads(rel_out.local_unit_data["config"])
+    # Verify the metrics endpoint the template configures is present.
+    endpoints = config.get("metrics_scrape_jobs", [])
+    assert len(endpoints) >= 1, "At least one metrics scrape job should be configured"
+
+
+def test_cos_agent_relation_joined_dashboard_registered():
+    """Dashboard directory is included in COS agent config when the relation joins."""
+    ctx = testing.Context({{ class_name }})
+    rel = testing.Relation("cos-agent")
+    state_in = testing.State(relations={rel})
+
+    state_out = ctx.run(ctx.on.relation_joined(rel), state_in)
+
+    rel_out = state_out.get_relation(rel.id)
+    config = json.loads(rel_out.local_unit_data.get("config", "{}"))
+    # The dashboards list comes from the JSON files in src/grafana_dashboards/.
+    dashboards = config.get("dashboards", [])
+    assert len(dashboards) >= 1, "At least one dashboard should be registered via COS agent"
