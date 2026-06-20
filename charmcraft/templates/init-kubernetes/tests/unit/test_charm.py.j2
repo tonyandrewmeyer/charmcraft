@@ -2,6 +2,11 @@
 # See LICENSE file for licensing details.
 #
 # To learn more about testing, see https://canonical.com/juju/docs/ops/latest/explanation/testing/
+#
+# NOTE: charm libraries must be downloaded before running tests:
+#   charmcraft fetch-libs
+
+import json
 
 import ops
 import pytest
@@ -93,3 +98,66 @@ def test_pebble_ready_service_not_ready():
     # Act & assert:
     with pytest.raises(testing.errors.UncaughtCharmError):
         ctx.run(ctx.on.pebble_ready(container_in), state_in)
+
+
+# ---------------------------------------------------------------------------
+# Observability tests
+# These tests verify the COS integration wired in charm.__init__.
+# They require the charm libraries to be downloaded first:
+#   charmcraft fetch-libs
+# ---------------------------------------------------------------------------
+
+
+def test_metrics_endpoint_relation_joined():
+    """Prometheus scrape jobs are published when metrics-endpoint relation joins."""
+    # Arrange:
+    ctx = testing.Context({{ class_name }})
+    rel = testing.Relation("metrics-endpoint")
+    # The MetricsEndpointProvider only writes app data when the unit is the leader.
+    state_in = testing.State(relations={rel}, leader=True)
+
+    # Act: fire relation-joined so the provider populates the relation data.
+    state_out = ctx.run(ctx.on.relation_joined(rel), state_in)
+
+    # Assert: the provider should have written the scrape job spec to app data.
+    rel_out = state_out.get_relation(rel.id)
+    assert "scrape_jobs" in rel_out.local_app_data, (
+        "MetricsEndpointProvider should set 'scrape_jobs' in app relation data"
+    )
+    scrape_jobs = json.loads(rel_out.local_app_data["scrape_jobs"])
+    assert len(scrape_jobs) >= 1
+    # The template configures scraping on port 8080 — verify the target is present.
+    targets = scrape_jobs[0]["static_configs"][0]["targets"]
+    assert any("8080" in t for t in targets), f"Expected port 8080 in targets, got {targets}"
+
+
+def test_grafana_dashboard_relation_joined():
+    """A dashboard is registered when the grafana-dashboard relation joins."""
+    # Arrange:
+    ctx = testing.Context({{ class_name }})
+    rel = testing.Relation("grafana-dashboard")
+    state_in = testing.State(relations={rel}, leader=True)
+
+    # Act:
+    state_out = ctx.run(ctx.on.relation_joined(rel), state_in)
+
+    # Assert: the provider should have written dashboard data to app data.
+    rel_out = state_out.get_relation(rel.id)
+    assert "dashboards" in rel_out.local_app_data, (
+        "GrafanaDashboardProvider should set 'dashboards' in app relation data"
+    )
+    # The 'dashboards' value is a JSON-encoded dict of dashboard titles to content.
+    dashboards = json.loads(rel_out.local_app_data["dashboards"])
+    assert len(dashboards) >= 1, "At least one dashboard should be registered"
+
+
+def test_logging_relation_joined():
+    """Charm handles the logging relation-joined event without error."""
+    # The LogForwarder (requirer side) configures Pebble log forwarding once
+    # the remote Loki provider sets its endpoint.  This test verifies that a
+    # bare relation-joined on the requirer side does not raise.
+    ctx = testing.Context({{ class_name }})
+    rel = testing.Relation("logging")
+    state_in = testing.State(relations={rel})
+    # Should not raise:
+    ctx.run(ctx.on.relation_joined(rel), state_in)

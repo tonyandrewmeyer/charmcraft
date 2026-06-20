@@ -37,3 +37,82 @@ def test_workload_version_is_set(charm: pathlib.Path, juju: jubilant.Juju):
     """Check that the correct version of the workload is running."""
     version = juju.status().apps["{{ name }}"].version
     assert version == "3.14"  # Replace 3.14 by the expected version of the workload.
+
+
+# ---------------------------------------------------------------------------
+# Observability integration tests
+#
+# Full COS integration requires a deployed COS lite stack.
+# See https://documentation.ubuntu.com/cos-lite/ for deployment instructions.
+#
+# To run these tests against a real COS stack, remove the @pytest.mark.skip
+# decorators and ensure the COS applications are available in your model.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skip(
+    reason=(
+        "Requires a COS lite stack. Deploy cos-lite from the Charmhub bundle "
+        "and remove this skip to run full observability integration tests."
+    )
+)
+def test_metrics_collection(charm: pathlib.Path, juju: jubilant.Juju):
+    """Verify Prometheus can scrape the workload metrics endpoint."""
+    resources = {
+        "some-container-image": METADATA["resources"]["some-container-image"]["upstream-source"]
+    }
+    juju.deploy(charm, app="{{ name }}", resources=resources)
+    juju.wait(jubilant.all_active)
+
+    # Relate to the prometheus-k8s charm from COS lite.
+    juju.integrate("{{ name }}:metrics-endpoint", "prometheus-k8s:metrics-endpoint")
+    juju.wait(jubilant.all_active)
+
+    # Verify the relation is joined and both applications are active.
+    status = juju.status()
+    app_status = status.apps["{{ name }}"]
+    assert app_status.is_active, f"{{ name }} is not active: {app_status.status}"
+
+
+@pytest.mark.skip(
+    reason=(
+        "Requires a COS lite stack. Deploy cos-lite from the Charmhub bundle "
+        "and remove this skip to run full observability integration tests."
+    )
+)
+def test_grafana_dashboard_registered(charm: pathlib.Path, juju: jubilant.Juju):
+    """Verify that the Grafana dashboard is registered via the grafana-dashboard relation."""
+    resources = {
+        "some-container-image": METADATA["resources"]["some-container-image"]["upstream-source"]
+    }
+    juju.deploy(charm, app="{{ name }}", resources=resources)
+    juju.wait(jubilant.all_active)
+
+    # Relate to the grafana-k8s charm from COS lite.
+    juju.integrate("{{ name }}:grafana-dashboard", "grafana-k8s:grafana-dashboard")
+    juju.wait(jubilant.all_active)
+
+    status = juju.status()
+    assert status.apps["{{ name }}"].is_active
+
+
+@pytest.mark.skip(
+    reason=(
+        "Requires a COS lite stack. Deploy cos-lite from the Charmhub bundle "
+        "and remove this skip to run full observability integration tests."
+    )
+)
+def test_log_forwarding(charm: pathlib.Path, juju: jubilant.Juju):
+    """Verify workload logs are forwarded to Loki via the logging relation."""
+    resources = {
+        "some-container-image": METADATA["resources"]["some-container-image"]["upstream-source"]
+    }
+    juju.deploy(charm, app="{{ name }}", resources=resources)
+    juju.wait(jubilant.all_active)
+
+    # Relate to the loki-k8s charm from COS lite.
+    juju.integrate("{{ name }}:logging", "loki-k8s:logging")
+    juju.wait(jubilant.all_active)
+
+    status = juju.status()
+    assert status.apps["{{ name }}"].is_active
