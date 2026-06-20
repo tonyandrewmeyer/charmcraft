@@ -8,6 +8,9 @@ import logging
 
 import ops
 
+# Observability charm library — run `charmcraft fetch-libs` to download this.
+from charms.cos_agent.v0.cos_agent import COSAgentProvider
+
 # A standalone module for workload-specific logic (no charming concerns):
 import {{ workload_module }}
 
@@ -21,6 +24,19 @@ class {{ class_name }}(ops.CharmBase):
         super().__init__(framework)
         framework.observe(self.on.install, self._on_install)
         framework.observe(self.on.start, self._on_start)
+
+        # Observability: bundle metrics, logs, and dashboards for grafana-agent.
+        # COSAgentProvider passes the configuration to the grafana-agent machine
+        # charm via the 'cos-agent' relation.  grafana-agent then:
+        #   - scrapes the workload metrics endpoint at port 8080 /metrics
+        #   - forwards logs to Loki
+        #   - ships the dashboard JSON to Grafana
+        # Adjust the metrics port to match your workload's actual port.
+        self._cos_agent = COSAgentProvider(
+            self,
+            metrics_endpoints=[{"path": "/metrics", "port": 8080}],
+            dashboard_dirs=["./src/grafana_dashboards"],
+        )
 
     def _on_install(self, event: ops.InstallEvent):
         """Install the workload on the machine."""
