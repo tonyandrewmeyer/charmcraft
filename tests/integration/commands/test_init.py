@@ -48,6 +48,8 @@ BASIC_INIT_FILES = frozenset(
         "README.md",
         "src",
         "src/charm.py",
+        "src/grafana_dashboards",
+        "src/grafana_dashboards/overview.json",
         "tests",
         "tests/integration",
         "tests/integration/conftest.py",
