@@ -47,3 +47,20 @@ config:
         Acceptable values are: "info", "debug", "warning", "error" and "critical"
       default: "info"
       type: string
+
+# Charm libraries from Charmhub that the charm uses.
+# Run `charmcraft fetch-libs` after init to download these into lib/.
+# After fetching, inspect the PYDEPS comment in each library and add any
+# listed packages to the [project].dependencies in pyproject.toml.
+# https://documentation.ubuntu.com/charmcraft/stable/reference/files/charmcraft-yaml-file/#charm-libs
+charm-libs:
+  - lib: cos_agent.cos_agent
+    version: "0"
+
+# Relations that this charm provides to other applications.
+# https://documentation.ubuntu.com/charmcraft/stable/reference/files/charmcraft-yaml-file/#provides
+provides:
+  # Bundle metrics, logs, and dashboards to the grafana-agent machine charm.
+  # `juju integrate <this-app>:cos-agent grafana-agent:cos-agent`
+  cos-agent:
+    interface: cos_agent

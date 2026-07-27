@@ -31,3 +31,60 @@ def test_workload_version_is_set(charm: pathlib.Path, juju: jubilant.Juju):
     """Check that the correct version of the workload is running."""
     version = juju.status().apps["{{ name }}"].version
     assert version == "3.14"  # Replace 3.14 by the expected version of the workload.
+
+
+# ---------------------------------------------------------------------------
+# Observability integration tests
+#
+# Full COS integration on machine charms requires:
+#   - A deployed COS lite stack (prometheus, loki, grafana)
+#   - The `grafana-agent` machine charm deployed in the same model
+#
+# To run these tests:
+# 1. Deploy COS lite: https://documentation.ubuntu.com/cos-lite/
+# 2. Deploy grafana-agent: juju deploy grafana-agent
+# 3. Remove the @pytest.mark.skip decorator from the tests below.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skip(
+    reason=(
+        "Requires grafana-agent (machine) and a COS lite stack. "
+        "See comment above for setup instructions."
+    )
+)
+def test_cos_agent_relation(charm: pathlib.Path, juju: jubilant.Juju):
+    """Verify that the charm integrates with grafana-agent via the cos-agent relation."""
+    juju.deploy(charm, app="{{ name }}")
+    juju.deploy("grafana-agent", channel="latest/stable")
+    juju.wait(jubilant.all_active)
+
+    # The cos-agent relation bundles metrics, logs, and dashboards to grafana-agent.
+    juju.integrate("{{ name }}:cos-agent", "grafana-agent:cos-agent")
+    juju.wait(jubilant.all_active)
+
+    status = juju.status()
+    assert status.apps["{{ name }}"].is_active, (
+        f"{{ name }} should be active after integrating with grafana-agent, "
+        f"got: {status.apps['{{ name }}'].status}"
+    )
+    assert status.apps["grafana-agent"].is_active
+
+
+@pytest.mark.skip(
+    reason=(
+        "Requires grafana-agent (machine) and a COS lite stack. "
+        "See comment above for setup instructions."
+    )
+)
+def test_metrics_are_scraped(charm: pathlib.Path, juju: jubilant.Juju):
+    """Verify that Prometheus receives metrics from the workload via grafana-agent."""
+    juju.deploy(charm, app="{{ name }}")
+    juju.deploy("grafana-agent", channel="latest/stable")
+    juju.integrate("{{ name }}:cos-agent", "grafana-agent:cos-agent")
+    # Cross-model: relate grafana-agent to Prometheus in the COS model.
+    # juju integrate grafana-agent:send-remote-write prometheus-remote-write:receive-remote-write
+    juju.wait(jubilant.all_active)
+
+    status = juju.status()
+    assert status.apps["{{ name }}"].is_active

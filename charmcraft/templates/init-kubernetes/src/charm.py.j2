@@ -9,6 +9,11 @@ import time
 
 import ops
 
+# Observability charm libraries — run `charmcraft fetch-libs` to download these.
+from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
+from charms.loki_k8s.v1.loki_push import LogForwarder
+from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider
+
 # A standalone module for workload-specific logic (no charming concerns):
 import {{ workload_module }}
 
@@ -24,6 +29,18 @@ class {{ class_name }}(ops.CharmBase):
         super().__init__(framework)
         framework.observe(self.on["some_container"].pebble_ready, self._on_pebble_ready)
         self.container = self.unit.get_container("some-container")
+
+        # Metrics: tell Prometheus where to scrape this workload's metrics.
+        # Configure your workload container to expose Prometheus metrics on port 8080
+        # at the /metrics path (adjust the port to match your workload).
+        self._metrics_endpoint = MetricsEndpointProvider(
+            self,
+            jobs=[{"static_configs": [{"targets": ["*:8080"]}]}],
+        )
+        # Logs: forward workload container logs to Loki via the 'logging' relation.
+        self._log_forwarder = LogForwarder(self)
+        # Dashboards: register the Grafana dashboard bundled under src/grafana_dashboards/.
+        self._grafana_dashboard = GrafanaDashboardProvider(self)
 
     def _on_pebble_ready(self, event: ops.PebbleReadyEvent):
         """Handle pebble-ready event."""
