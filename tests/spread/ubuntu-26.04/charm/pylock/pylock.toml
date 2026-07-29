@@ -1,0 +1,68 @@
+lock-version = "1.0"
+created-by = "pip"
+
+[[packages]]
+name = "opentelemetry-api"
+version = "1.42.0"
+
+[[packages.wheels]]
+name = "opentelemetry_api-1.42.0-py3-none-any.whl"
+url = "https://files.pythonhosted.org/packages/1b/0b/be5daf659b82b525338fde371dfcfab09b606a19bb5620c37076964710ec/opentelemetry_api-1.42.0-py3-none-any.whl"
+
+[packages.wheels.hashes]
+sha256 = "558d88f88192a973579910ef6f2c13db47a268d5ec2e53e83e50e74a39a02922"
+
+[[packages]]
+name = "ops"
+version = "3.7.0"
+
+[[packages.wheels]]
+name = "ops-3.7.0-py3-none-any.whl"
+url = "https://files.pythonhosted.org/packages/35/b0/19722b4b51696fbca41d3454f3dd3a73e89951303487b47280c6f3e277d4/ops-3.7.0-py3-none-any.whl"
+
+[packages.wheels.hashes]
+sha256 = "7050d5e629ac17de9d443e64f4ad09857e8012c9012c8ba66c9e765899d50bd1"
+
+[[packages]]
+name = "overrides"
+version = "7.7.0"
+
+[[packages.wheels]]
+name = "overrides-7.7.0-py3-none-any.whl"
+url = "https://files.pythonhosted.org/packages/2c/ab/fc8290c6a4c722e5514d80f62b2dc4c4df1a68a41d1364e625c35990fcf3/overrides-7.7.0-py3-none-any.whl"
+
+[packages.wheels.hashes]
+sha256 = "c7ed9d062f78b8e4c1a7b70bd8796b35ead4d9f510227ef9c5dc7626c60d7e49"
+
+[[packages]]
+name = "pyyaml"
+version = "6.0.3"
+
+[[packages.wheels]]
+name = "pyyaml-6.0.3-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl"
+url = "https://files.pythonhosted.org/packages/88/f9/16491d7ed2a919954993e48aa941b200f38040928474c9e85ea9e64222c3/pyyaml-6.0.3-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl"
+
+[packages.wheels.hashes]
+sha256 = "c458b6d084f9b935061bc36216e8a69a7e293a2f1e68bf956dcd9e6cbcd143f5"
+
+[[packages]]
+name = "typing-extensions"
+version = "4.15.0"
+
+[[packages.wheels]]
+name = "typing_extensions-4.15.0-py3-none-any.whl"
+url = "https://files.pythonhosted.org/packages/18/67/36e9267722cc04a6b9f15c7f3441c2363321a3ea07da7ae0c0707beb2a9c/typing_extensions-4.15.0-py3-none-any.whl"
+
+[packages.wheels.hashes]
+sha256 = "f0fa19c6845758ab08074a0cfa8b7aecb71c999ca73d62883bc25cc018c4e548"
+
+[[packages]]
+name = "websocket-client"
+version = "1.9.0"
+
+[[packages.wheels]]
+name = "websocket_client-1.9.0-py3-none-any.whl"
+url = "https://files.pythonhosted.org/packages/34/db/b10e48aa8fff7407e67470363eac595018441cf32d5e1001567a7aeba5d2/websocket_client-1.9.0-py3-none-any.whl"
+
+[packages.wheels.hashes]
+sha256 = "af248a825037ef591efbf6ed20cc5faa03d3b47b9e5a2230a529eeee1c1fc3ef"
