@@ -1,0 +1,8 @@
+#!/bin/bash
+# Workshop `check-health` hook for the {{ name }} charm dev environment.
+# Reports whether the `workshop` user can build and test the charm.
+if sudo -H -i -u workshop -- bash -c 'cd /project && charmcraft version >/dev/null 2>&1 && uv run python -c "import ops" >/dev/null 2>&1'; then
+  workshopctl set-health okay
+else
+  workshopctl set-health --code="project-dev-not-ready" error "charmcraft or the charm's uv environment is not ready for the workshop user"
+fi

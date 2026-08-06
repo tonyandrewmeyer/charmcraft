@@ -1,0 +1,52 @@
+# This file configures a Canonical Workshop dev environment for the {{ name }} charm.
+# Workshop (https://github.com/canonical/workshop) launches an ephemeral LXD
+# container with a reproducible toolchain. Run `workshop launch` from the charm
+# project root, then drive the actions below with `workshop run dev <action>`.
+#
+# The charm is packed *inside* the workshop with `charmcraft pack --destructive-mode`
+# (there is no nested build VM), so this `base` must match the charm's build base
+# in charmcraft.yaml (ubuntu@24.04). Multi-base charms would need the LXD provider,
+# which is out of scope for this scaffold.
+name: dev
+base: ubuntu@24.04
+sdks:
+  # The `system` SDK exposes host resources to the workshop. The `juju-api`
+  # tunnel slot points at a Juju controller running OUTSIDE the workshop.
+  # Bootstrapping a controller inside an unprivileged workshop container does
+  # not work today, so integration tests target an external controller on the
+  # host (e.g. a `localhost`/LXD controller you bootstrapped yourself).
+  - name: system
+    slots:
+      juju-api:
+        interface: tunnel
+        endpoint: 17070
+  # uv manages the charm's Python dependencies and runs its tests.
+  - name: uv
+  # juju drives deployments against the external controller.
+  - name: juju
+    channel: 3.6/stable
+  # charmcraft packs the charm in destructive mode (see the `pack` action).
+  - name: charmcraft
+    channel: latest/stable
+  # The in-project SDK at .workshop/project-dev/ installs the charm's own
+  # build/test dependencies (see .workshop/project-dev/sdk.yaml and its hooks).
+  - name: project-dev
+# NOTE: there is intentionally no `connections:` block for the controller.
+# A `system:` SDK tunnel slot is not auto-connected, so it cannot be listed in
+# `connections:`. After `workshop launch`, wire juju to the host controller
+# manually:
+#
+#   workshop connect dev/juju:controller dev/system:juju-api
+#   workshop remount dev/juju:juju-data --host-source ~/.local/share/juju
+#
+actions:
+  # Run the unit tests.
+  unit: |
+    uv run pytest tests/unit "$@"
+  # Pack the charm inside the workshop. This produces a .charm in the project
+  # root, which the integration tests pick up automatically.
+  pack: |
+    charmcraft pack --destructive-mode
+  # Run the integration tests against the external Juju controller.
+  integration: |
+    uv run pytest tests/integration "$@"
