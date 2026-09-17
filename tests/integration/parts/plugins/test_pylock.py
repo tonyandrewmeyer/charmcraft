@@ -48,6 +48,7 @@ def pylock_project(project_path: pathlib.Path) -> None:
         cwd=project_path,
         capture_output=True,
         text=True,
+        check=False,
     )
     if result.returncode != 0:
         pytest.skip(f"could not generate a pylock.toml with this pip:\n{result.stderr}")
