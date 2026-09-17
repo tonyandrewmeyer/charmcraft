@@ -16,7 +16,9 @@
 """Unit tests for the Charmcraft-specific pylock plugin."""
 
 import pathlib
+import typing
 
+import craft_parts
 import pytest
 import pytest_check
 
@@ -44,43 +46,98 @@ def test_get_venv_directory(
     assert pylock_plugin._get_venv_directory() == install_path / "venv"
 
 
+@pytest.mark.parametrize("source_subdir", [None, "subdir"])
 def test_get_package_install_commands(
-    pylock_plugin: plugins.PylockPlugin,
-    build_path: pathlib.Path,
+    tmp_path: pathlib.Path,
     install_path: pathlib.Path,
+    source_subdir: str | None,
 ):
-    pylock_plugin._get_pip = lambda: "/python -m pip"
+    project_dirs = craft_parts.ProjectDirs(work_dir=tmp_path)
+    spec: dict[str, typing.Any] = {
+        "plugin": "pylock",
+        "source": str(tmp_path),
+    }
+    if source_subdir:
+        spec["source-subdir"] = source_subdir
+    plugin_properties = plugins.PylockPluginProperties.unmarshal(spec)
+    part_spec = craft_parts.plugins.extract_part_properties(spec, plugin_name="pylock")
+    part = craft_parts.Part(
+        "foo", part_spec, project_dirs=project_dirs, plugin_properties=plugin_properties
+    )
+    project_info = craft_parts.ProjectInfo(
+        application_name="test",
+        project_dirs=project_dirs,
+        cache_dir=tmp_path,
+    )
+    part_info = craft_parts.PartInfo(project_info=project_info, part=part)
+    plugin = typing.cast(
+        plugins.PylockPlugin,
+        craft_parts.plugins.get_plugin(
+            part=part, part_info=part_info, properties=plugin_properties
+        ),
+    )
+    plugin._get_pip = lambda: "/python -m pip"  # ty: ignore[invalid-assignment]
+
+    build_path = part_info.part_build_dir
+    build_subdir = part_info.part_build_subdir
+    if source_subdir:
+        assert build_subdir != build_path
+    else:
+        assert build_subdir == build_path
+
     copy_src_cmd = (
-        f"cp --archive --recursive --reflink=auto {build_path}/src {install_path}"
+        f"cp --archive --recursive --reflink=auto {build_subdir}/src {install_path}"
     )
     copy_lib_cmd = (
-        f"cp --archive --recursive --reflink=auto {build_path}/lib {install_path}"
+        f"cp --archive --recursive --reflink=auto {build_subdir}/lib {install_path}"
     )
 
-    commands = pylock_plugin._get_package_install_commands()
+    default_commands = plugin._get_package_install_commands()
 
     # pip is bootstrapped to a version that understands pylock.toml, then the
     # lock file is installed and the environment is checked.
-    pytest_check.is_in("/python -m pip install --upgrade 'pip>=26.1'", commands)
-    pytest_check.is_in("/python -m pip install --requirement=pylock.toml", commands)
-    pytest_check.is_in("/python -m pip check", commands)
-    pytest_check.is_not_in(copy_src_cmd, commands)
-    pytest_check.is_not_in(copy_lib_cmd, commands)
+    pytest_check.is_in("/python -m pip install --upgrade 'pip>=26.1'", default_commands)
+    pytest_check.is_in(
+        "/python -m pip install --requirement=pylock.toml", default_commands
+    )
+    pytest_check.is_in("/python -m pip check", default_commands)
+    pytest_check.is_not_in(copy_src_cmd, default_commands)
+    pytest_check.is_not_in(copy_lib_cmd, default_commands)
 
-    (build_path / "src").mkdir()
+    if source_subdir:
+        # Creating src/lib in parent build_path should not trigger copy
+        (build_path / "src").mkdir(parents=True)
+        (build_path / "lib" / "charm").mkdir(parents=True)
+        wrong_copy_src_cmd = (
+            f"cp --archive --recursive --reflink=auto {build_path}/src {install_path}"
+        )
+        wrong_copy_lib_cmd = (
+            f"cp --archive --recursive --reflink=auto {build_path}/lib {install_path}"
+        )
+        commands_with_parent_dirs = plugin._get_package_install_commands()
+        pytest_check.is_not_in(wrong_copy_src_cmd, commands_with_parent_dirs)
+        pytest_check.is_not_in(wrong_copy_lib_cmd, commands_with_parent_dirs)
+        pytest_check.is_not_in(copy_src_cmd, commands_with_parent_dirs)
+        pytest_check.is_not_in(copy_lib_cmd, commands_with_parent_dirs)
 
-    pytest_check.is_in(copy_src_cmd, pylock_plugin._get_package_install_commands())
-    pytest_check.is_not_in(copy_lib_cmd, pylock_plugin._get_package_install_commands())
+    (build_subdir / "src").mkdir(parents=True)
 
-    (build_path / "lib").mkdir()
+    pytest_check.equal(
+        plugin._get_package_install_commands(), [*default_commands, copy_src_cmd]
+    )
 
-    pytest_check.is_in(copy_src_cmd, pylock_plugin._get_package_install_commands())
-    pytest_check.is_in(copy_lib_cmd, pylock_plugin._get_package_install_commands())
+    (build_subdir / "lib" / "charm").mkdir(parents=True)
 
-    (build_path / "src").rmdir()
+    pytest_check.equal(
+        plugin._get_package_install_commands(),
+        [*default_commands, copy_src_cmd, copy_lib_cmd],
+    )
 
-    pytest_check.is_not_in(copy_src_cmd, pylock_plugin._get_package_install_commands())
-    pytest_check.is_in(copy_lib_cmd, pylock_plugin._get_package_install_commands())
+    (build_subdir / "src").rmdir()
+
+    pytest_check.equal(
+        plugin._get_package_install_commands(), [*default_commands, copy_lib_cmd]
+    )
 
 
 def test_install_commands_quote_pylock_file(pylock_plugin: plugins.PylockPlugin):
@@ -90,7 +147,7 @@ def test_install_commands_quote_pylock_file(pylock_plugin: plugins.PylockPlugin)
         "pylock-file": "pylock.dev.toml",
     }
     pylock_plugin._options = plugins.PylockPluginProperties.unmarshal(spec)
-    pylock_plugin._get_pip = lambda: "pip"
+    pylock_plugin._get_pip = lambda: "pip"  # ty: ignore[invalid-assignment]
 
     assert "pip install --requirement=pylock.dev.toml" in (
         pylock_plugin._get_package_install_commands()
