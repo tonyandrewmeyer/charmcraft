@@ -17,6 +17,7 @@
 import pathlib
 import subprocess
 import sys
+import typing
 
 import craft_application
 import pytest
@@ -26,26 +27,21 @@ pytestmark = [
 ]
 
 
-@pytest.fixture(autouse=True)
-def add_part(
-    service_factory: craft_application.ServiceFactory, project_path: pathlib.Path
+@pytest.mark.slow
+@pytest.mark.parametrize("source_subdir", [None, "charm_dir"])
+def test_pylock_plugin(
+    service_factory: craft_application.ServiceFactory,
+    project_path: pathlib.Path,
+    tmp_path: pathlib.Path,
+    source_subdir: str | None,
 ):
-    service_factory.get("project").get().parts = {
-        "my-charm": {
-            "plugin": "pylock",
-            "source": str(project_path),
-            "source-type": "local",
-        }
-    }
-
-
-@pytest.fixture
-def pylock_project(project_path: pathlib.Path) -> None:
+    charm_dir = project_path / source_subdir if source_subdir else project_path
+    charm_dir.mkdir(parents=True, exist_ok=True)
     # ``pip lock`` (the PEP 751 lock file generator) is itself experimental and
     # was added in pip 25.1; skip if this runner's pip can't produce one.
     result = subprocess.run(
         [sys.executable, "-m", "pip", "lock", "ops", "--output", "pylock.toml"],
-        cwd=project_path,
+        cwd=charm_dir,
         capture_output=True,
         text=True,
         check=False,
@@ -53,16 +49,20 @@ def pylock_project(project_path: pathlib.Path) -> None:
     if result.returncode != 0:
         pytest.skip(f"could not generate a pylock.toml with this pip:\n{result.stderr}")
 
-    source_dir = project_path / "src"
-    source_dir.mkdir()
+    source_dir = charm_dir / "src"
+    source_dir.mkdir(parents=True, exist_ok=True)
     (source_dir / "charm.py").write_text("# Charm file")
 
+    part_def: dict[str, typing.Any] = {
+        "plugin": "pylock",
+        "source": str(project_path),
+        "source-type": "local",
+    }
+    if source_subdir:
+        part_def["source-subdir"] = source_subdir
 
-@pytest.mark.slow
-@pytest.mark.usefixtures("pylock_project")
-def test_pylock_plugin(
-    service_factory: craft_application.ServiceFactory, tmp_path: pathlib.Path
-):
+    service_factory.get("project").get().parts = {"my-charm": part_def}
+
     install_path = tmp_path / "parts" / "my-charm" / "install"
     stage_path = tmp_path / "stage"
 
