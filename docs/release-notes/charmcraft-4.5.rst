@@ -58,6 +58,17 @@ Minor features
 Charmcraft 4.5 brings the following minor changes.
 
 
+pylock plugin
+~~~~~~~~~~~~~
+
+The new :ref:`pylock plugin <craft_parts_pylock_plugin>` builds charms whose
+dependencies are recorded in a `PEP 751 <https://peps.python.org/pep-0751/>`__
+``pylock.toml`` lock file. It installs the lock file with pip, so it works with a
+lock file from any tool that produces one, such as uv, PDM, or ``pip lock``. pip's
+support for installing from ``pylock.toml`` is experimental.
+
+To switch an existing charm to the new plugin, see :ref:`howto-migrate-to-pylock`.
+
 Base-specific init profiles
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
